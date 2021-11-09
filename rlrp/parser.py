@@ -6,6 +6,9 @@ UINT32 = 'uintle:32'
 UINT64 = 'uintle:64'
 FLOAT32 = 'floatle:32'
 
+def print(str):
+    pass
+
 def parsestr(bits):
     length = bits.read(UINT32)
     # if length > 100:
@@ -80,18 +83,56 @@ def parsedict(bits):
     return props
 
 
+def parselevel(bits):
+    return {"name": parsestr(bits)}
+
+def parsekeyframe(bits):
+    return {
+        "time": bits.read(FLOAT32),
+        "frame": bits.read(UINT32),
+        "file_position": bits.read(UINT32)
+            }
+
+def parsedebugstr(bits):
+    return {
+        "number": bits.read(UINT32),
+        "username": parsestr(bits),
+        "text": parsestr(bits)
+            }
+
 def parse(filename):
     f = open(filename, "rb")
     bits = bitstring.BitStream(f)
 
-    data = {}
-    data["length"]= bits.read(INT32)
-    data["crc"] = bits.read(UINT32)
-    data["engine_version"] = bits.read(UINT32)
-    data["license"] = bits.read(UINT32)
-    data["net_license"] = bits.read(UINT32)
-    data["TAGame"] = parsestr(bits)
-    data["props"] = parsedict(bits)
+    header = {}
+    header["length"]= bits.read(INT32)
+    header["crc"] = bits.read(UINT32)
+    header["engine_version"] = bits.read(UINT32)
+    header["license"] = bits.read(UINT32)
+    header["net_license"] = bits.read(UINT32)
+    header["TAGame"] = parsestr(bits)
+    header["props"] = parsedict(bits)
 
-    return data
+    replay = {}
+    replay["length"] = bits.read(UINT32)
+    replay["crc"] = bits.read(UINT32)
+    replay["level_length"] = bits.read(UINT32)
+    replay["levels"] = []
+    for i in range(replay["level_length"]):
+        replay["levels"].append(parselevel(bits))
+
+    replay["keyframe_length"] = bits.read(UINT32)
+    replay["keyframes"] = []
+    for i in range(replay["keyframe_length"]):
+        replay["keyframes"].append(parsekeyframe(bits))
+
+    replay["network_stream_length"] = bits.read(UINT32)
+    network_stream = bits.read(f"bytes:{replay['network_stream_length']}")
+
+    replay["debug_string_length"] = bits.read(UINT32)
+    replay["debug_strings"] = [
+            parsedebugstr(bits) for x in range(replay["debug_string_length"])
+            ]
+
+    return replay
 
