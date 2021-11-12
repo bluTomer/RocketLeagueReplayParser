@@ -1,3 +1,4 @@
+from rlrp.parsers import PropertyDictionary
 from typing import Any, Dict
 import bitstring
 
@@ -79,7 +80,7 @@ def parsedict(bits):
         print(f"adding prop: {prop}")
         if prop["name"] == "None":
             break
-        props[prop["name"]] = prop["value"]
+        props[prop["name"]] = prop
     return props
 
 
@@ -111,8 +112,9 @@ def parse(filename):
     header["license"] = bits.read(UINT32)
     header["net_license"] = bits.read(UINT32)
     header["TAGame"] = parsestr(bits)
-    header["props"] = parsedict(bits)
+    header["props"] = PropertyDictionary(bits)
 
+    return header
     replay = {}
     replay["length"] = bits.read(UINT32)
     replay["crc"] = bits.read(UINT32)
@@ -134,5 +136,5 @@ def parse(filename):
             parsedebugstr(bits) for x in range(replay["debug_string_length"])
             ]
 
-    return replay
+    return header
 
